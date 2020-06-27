@@ -1,18 +1,76 @@
 import React, {Component} from "react";
-import {BrowserRouter as Router, Route, Link} from "react-router-dom";
+import {
+    Route,
+    BrowserRouter as Router,
+    Switch,
+    Redirect,
+} from "react-router-dom";
+import Home from "./pages/Home";
+import Projects from "./pages/Projects"
+import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+import {auth} from "./services/firebase";
+
+
+function PrivateRoute({component: Component, authenticated, ...rest}) {
+    return (
+        <Route
+            {...rest}
+            render={(props) => authenticated === true
+            ? <Component {...props}/>
+            : <Redirect to={{pathname: "/login", state: {from: props.location}}}/>}
+        />
+    )
+}
+
+function PublicRoute({component: Component, authenticated,  ...rest}) {
+    return (
+        <Route
+            {...rest}
+            render={(props) => authenticated === false
+            ? <Component {...props}/>
+            : <Redirect to="/projects"/>}
+        />
+    )
+}
+
 
 class App extends Component {
+    constructor() {
+        super();
+        this.state = {
+            authenticated: false,
+            loading: true,
+        };
+    }
+
+    componentDidMount() {
+        auth().onAuthStateChanged((user) => {
+            if (user) {
+                this.setState({
+                    authenticated: true,
+                    loading: false,
+                });
+            } else {
+                this.setState({
+                    authenticated: false,
+                    loading: false,
+                });
+            }
+        });
+    }
+
     render() {
-        <Router>
-            <div className="container">
-                <h3>Hello, World!</h3>
-            </div>
-            <Route path="/about" component={About}/>
-            <Route path="/projects" component={Projects}/>
-            <Route path="/socials" component={Socials}/>
-            <Route path="/goals" component={Goals}/>
-            <Route path="/contact" component={Contact}/>
-        </Router>
+        return this.state.loading === true ? <h2>Loading...</h2> : (
+            <Router>
+                <Switch>
+                    <Route exact path="/" component={Home}/>
+                    <PrivateRoute path="/projects" authenticated={this.state.authenticated} component={Projects}/>
+                    <PublicRoute path="/signup" authenticated={this.state.authenticated} component={Signup}/>
+                    <PublicRoute path="/login" authenticated={this.state.authenticated} component={Login}/>
+                </Switch>
+            </Router>
+        );
     }
 }
 
